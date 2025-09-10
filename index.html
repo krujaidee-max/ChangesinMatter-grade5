@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เกม : เลือกช้อยส์ประสมคำ</title>
+<style>
+/* ===== ฟอนต์รวมหน้า (เหมือนเกมเดิม) ===== */
+@font-face{
+  font-family: 'MyGameFont';
+  src: url('image/THSarabunNew.woff2') format('woff2'),
+       url('image/THSarabunNew.woff') format('woff'),
+       url('image/THSarabunNew.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face{
+  font-family: 'MyGameFont';
+  src: url('image/THSarabunNewBold.woff2') format('woff2'),
+       url('image/THSarabunNewBold.woff') format('woff'),
+       url('image/THSarabunNewBold.ttf') format('truetype');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+html, body, button, input, select, textarea, .pill, .btn, .btn-mini,
+.levelBtn, #startTitle, #countdown, .label, #timer {
+  font-family: 'MyGameFont', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+}
+
+:root{ --glass: rgba(0,0,0,.45); --ok:#10b981; --bad:#ef4444; }
+*{ box-sizing:border-box }
+html,body{ height:100%; margin:0 }
+body{
+  background: url("image/background2.png") center center / cover no-repeat fixed !important;
+  overflow:hidden; color:#fff;
+}
+#game{ position:relative; width:100vw; height:100vh; overflow:hidden }
+
+/* ===== HUD (เหมือนเดิม) ===== */
+.hud{ position:fixed; inset:26px 12px auto 38px; display:flex; align-items:center; gap:12px; justify-content:space-between; pointer-events:none; z-index:15000 }
+.hud .left,.hud .right{ display:flex; align-items:center; gap:12px }
+.pill{ background:var(--glass); backdrop-filter:blur(6px); padding:8px 12px; border-radius:999px; box-shadow:0 4px 18px rgba(0,0,0,.25) }
+#timer{ font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.5px; font-size:20px }
+.btn-mini{ pointer-events:auto; background:#1f2937; color:#fff; border:none; border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer; box-shadow:0 4px 18px rgba(0,0,0,.25) }
+.btn-mini:hover{ filter:brightness(1.1) }
+.hud .right { align-items: flex-end; }
+.hud .right .stack { align-items: flex-end; }
+.hud .right .pill{ text-align:right }
+
+.score-label{
+  font-size: 20px;       /* ขนาดตัวอักษร */
+  font-weight: 900;      /* ความหนา */
+  color: #fff;           /* สีขาว เห็นชัดบนพื้นหลัง */
+  margin-bottom: 6px;    /* เว้นระยะห่างระหว่างคำว่า “คะแนน” กับกล่อง pill */
+  text-align: center;
+width: 100%;
+margin-top: -4px;
+}
+
+
+/* กล่องเหรียญทอง: ล็อกขนาดตายตัวตามจำนวนสูงสุดที่กำหนด */
+.pill.gold{
+  /* === ตั้งค่าปรับได้ === */
+  --gold-size: 28px;  /* ขนาดอีโมจิ/ไอคอนต่อเหรียญ */
+  --gold-gap: 6px;    /* ระยะห่างระหว่างเหรียญ */
+  --gold-cols: 5;    /* จำนวนเหรียญต่อแถว (สูงสุด) */
+  --gold-rows: 1;     /* จำนวนแถว (สูงสุด) */
+
+  /* สไตล์เดิม */
+  display:flex;
+  flex-wrap:wrap;
+  gap: var(--gold-gap);
+  background: var(--glass);
+  border-radius: 999px;
+  padding: 8px 12px;
+  line-height: 1;
+
+  /* ขนาดตายตัว = (พื้นที่เหรียญ + ช่องว่าง) + padding ซ้ายขวา/บนล่าง */
+  width: calc(
+    (var(--gold-cols) * var(--gold-size)) +
+    ((var(--gold-cols) - 1) * var(--gold-gap)) +
+    (12px + 12px)   /* padding-left + padding-right */
+  );
+  height: calc(
+    (var(--gold-rows) * var(--gold-size)) +
+    ((var(--gold-rows) - 1) * var(--gold-gap)) +
+    (8px + 8px)     /* padding-top + padding-bottom */
+  );
+
+  /* ป้องกันเลื่อนขยาย-หด */
+  min-width:  calc(
+    (var(--gold-cols) * var(--gold-size)) +
+    ((var(--gold-cols) - 1) * var(--gold-gap)) +
+    (12px + 12px)
+  );
+  max-width:  calc(
+    (var(--gold-cols) * var(--gold-size)) +
+    ((var(--gold-cols) - 1) * var(--gold-gap)) +
+    (12px + 12px)
+  );
+  min-height: calc(
+    (var(--gold-rows) * var(--gold-size)) +
+    ((var(--gold-rows) - 1) * var(--gold-gap)) +
+    (8px + 8px)
+  );
+  max-height: calc(
+    (var(--gold-rows) * var(--gold-size)) +
+    ((var(--gold-rows) - 1) * var(--gold-gap)) +
+    (8px + 8px)
+  );
+
+  /* ขนาดอีโมจิ/รูป */
+  font-size: var(--gold-size);
+}
+
+/* ไอเท็มเหรียญ */
+.pill.gold .bar{
+  display:inline-block;
+  width: var(--gold-size);
+  height: var(--gold-size);
+  transform: translateY(0);
+  /* ถ้าใช้ <img> เป็นทองคำแท่ง ให้เพิ่ม: object-fit: contain; */
+}
+
+/* (ทางเลือก) ลดขนาดบนจอเล็ก */
+@media (max-width: 480px){
+  .pill.gold{
+    --gold-size: 24px;
+    --gold-cols: 8;
+    --gold-rows: 2;
+  }
+}
+
+
+
+/* ===== Landing ===== */
+#landing{ position: fixed; inset: 0; display: flex; flex-direction: column; gap: 22px; align-items: center; justify-content: center; background: url("image/background2.png") center/cover no-repeat fixed !important; z-index: 20000; transition: opacity .3s ease }
+#landing.hide{ opacity:0; pointer-events:none; visibility:hidden }
+#landing .brand{ width: min(92vw, 1100px) }
+#landing .brand img{ width:100%; height:auto; display:block; filter:drop-shadow(0 10px 30px rgba(0,0,0,.6)) }
+
+/* ===== Welcome (หน้าสุด) ===== */
+#welcome{
+  position: fixed; inset: 0;
+  background: url("image/welcome.png") center/cover no-repeat fixed;
+  display: flex;
+  flex-direction: column;          /* 👈 จัดเรียงเป็นแนวตั้ง */
+  align-items: center;             /* กึ่งกลางแนวนอน */
+  justify-content: center;         /* กึ่งกลางแนวตั้ง */
+  gap: 24px;                       /* ระยะห่างระหว่างแบนเนอร์กับปุ่ม */
+  z-index: 25000;
+  transition: opacity .3s ease;
+}
+
+#welcome.hide{ opacity:0; pointer-events:none; visibility:hidden }
+
+#welcome #enterBtn{
+  padding: 12px 28px;
+  font-size: clamp(22px, 4vw, 36px);
+  font-weight: 1000; letter-spacing:.2px;
+  border: 0; border-radius: 16px;
+  color: #fff; background: rgba(0,0,0,.55);
+  box-shadow: 0 10px 28px rgba(0,0,0,.35);
+  cursor: pointer; backdrop-filter: blur(6px);
+  border:1px solid rgba(255,255,255,.18);
+}
+#welcome #enterBtn:hover{ filter: brightness(1.08) }
+/* Banner บนหน้า Welcome */
+#welcome .brand{
+  width: min(90vw, 1000px);
+  margin-bottom: 24px;
+  display:flex; justify-content:center;
+}
+#welcome .brand img{
+  width:100%; height:auto; display:block;
+  animation: pulse 3s infinite ease-in-out;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.45));
+}
+
+/* กล่องรวม banner + ปุ่ม */
+#welcome .welcome-content{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0px;
+  margin-top: 450px;          /* 👈 ขยับลงมา (ปรับเลขได้ตามต้องการ) */
+}
+
+/* เอฟเฟกต์ pulse เบา ๆ */
+@keyframes pulse{
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.04); opacity: 0.9; }
+}
+
+
+.level-menu{ display:flex; flex-direction:column; gap:14px; width:min(92vw, 640px) }
+.levelBtn{ width:100%; padding:10px 16px; font-size: clamp(20px, 4vw, 34px); font-weight: 1000; letter-spacing:.2px; border: 0; border-radius: 14px; color: #fff; background: rgba(0,0,0,.55); box-shadow: 0 10px 28px rgba(0,0,0,.35); cursor: pointer; text-align:center; border:1px solid rgba(255,255,255,.18); backdrop-filter: blur(6px) }
+.levelBtn:hover{ filter: brightness(1.08) }
+
+/* ===== หน้าเริ่ม/นับถอยหลัง ===== */
+#startScreen{ position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,.9); z-index:9999; text-align:center; padding:24px }
+#startTitle{ font-size:clamp(26px,5vw,48px); font-weight:900; margin-bottom:10px }
+#startBtn{ margin-top:12px; padding:10px 18px; border:0; border-radius:12px; font-weight:800; cursor:pointer; background:#1f2937; color:#fff }
+#startBtn:hover{ filter:brightness(1.1) }
+#countdown{ display:none; font-size:clamp(56px,12vw,120px); font-weight:1000; line-height:1; margin-top:8px }
+
+/* ===== คู่มือ ===== */
+#guideScreen{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:url("image/background2.png") center/cover no-repeat; z-index: 20001 }
+#guideScreen .guide-wrap{ width:min(95vw, 1200px); max-height:92vh; display:flex; flex-direction:column; gap:10px; align-items:center; justify-content:center }
+#guideScreen img{ width:100%; height:auto; max-height:92vh; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.55); display:block }
+#guideScreen .guide-close{ align-self:flex-end; margin-top:8px; background:#1f2937; color:#fff; border:none; border-radius:12px; padding:8px 12px; font-weight:800; cursor:pointer }
+#guideScreen .guide-close:hover{ filter:brightness(1.1) }
+
+/* ===== ป๊อปอัปจบด่าน ===== */
+#overlay{ position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.55); visibility:hidden; opacity:0; transition:.25s; z-index:9999 }
+#overlay.show{ visibility:visible; opacity:1 }
+.panel{ background:rgba(20,20,20,.9); border:1px solid rgba(255,255,255,.1); padding:22px 26px; border-radius:20px; min-width:320px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5) }
+.panel h1{ margin:0 0 6px; font-size:28px }
+.panel p{ margin:8px 0 18px; opacity:.85 }
+.btn{ background:#1f2937; color:#fff; border:none; border-radius:12px; padding:10px 16px; font-weight:700; cursor:pointer }
+.btn:hover{ filter:brightness(1.1) }
+.actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px }
+#overlay .btn { padding: 12px 24px; font-size: 20px; font-weight: 900; border-radius: 18px; min-width: 180px }
+#restartBtn { background:#1f2937 } #restartBtn:hover{ filter:brightness(1.1) }
+#selectLevelBtn { background:#2563eb } #selectLevelBtn:hover{ background:#1d4ed8 }
+#nextLevelBtn { background:#10b981 } #nextLevelBtn:hover{ background:#059669 }
+
+/* ===== คำถาม (เหลือแค่ตัวหนังสือ + เงา) ===== */
+#questionBox {
+  position: absolute;
+  top: 60px;                /* 👈 ปรับตำแหน่งแนวตั้ง */
+  left: 50%;
+  transform: translateX(-50%);
+  
+  background: none;         /* ❌ ไม่เอากล่อง */
+  border: none;             /* ❌ ไม่เอากรอบ */
+  padding: 0;               /* ❌ ไม่เอาช่องว่างในกล่อง */
+  
+  font-size: clamp(28px, 4.5vw, 56px); /* 👈 ปรับขนาดตัวหนังสือ */
+  font-weight: 1000;
+  color: #fff;              /* สีตัวหนังสือ */
+  text-shadow: 0 4px 12px rgba(0,0,0,.8); /* 👈 เงาตัวหนังสือ */
+  
+  z-index: 10;
+  white-space: pre;      /* <-- สำคัญ */
+  overflow: visible;     /* <-- สำคัญ */
+  text-align: center;
+}
+
+
+/* ===== ช้อยส์แบบภาพ + ตัวหนังสืออยู่หน้า ===== */
+.option{
+  position:absolute;
+  cursor:pointer;
+  user-select:none;
+
+  background: transparent;
+  box-shadow: none;
+  border: none;
+
+  width: var(--img-w, 260px);
+  height: var(--img-h, 180px);
+
+  /* ⬇️ เพิ่ม transform เพื่อขยับ ‘กล่อง’ ทั้งใบ = hitbox ขยับตาม */
+  transform: translate(var(--opt-offset-x, 0), var(--opt-offset-y, 0));
+
+  transition: left 2000ms cubic-bezier(.2,.9,.2,1),
+              right 2000ms cubic-bezier(.2,.9,.2,1),
+              transform 2000ms cubic-bezier(.2,.9,.2,1);
+  will-change: left, right, transform;
+  border-radius:16px;
+}
+
+
+/* รูปจริง: เติมเต็มกล่องเสมอ */
+.option .opt-bg{
+  position:absolute;
+  inset:0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events:none;
+  border-radius:16px;
+  z-index:1;
+}
+
+/* ข้อความทับหน้า (เวอร์ชันเดียวพอ) */
+.option .opt-label{
+  position:absolute; left:50%; top:50%;
+  transform: translate(calc(-50% + var(--label-offset-x,0)),
+                      calc(-50% + var(--label-offset-y,0)));
+  color:#fff; text-shadow:0 3px 10px rgba(0,0,0,.6);
+  font-size: clamp(28px,3.6vw,42px);
+  font-weight:900;
+  white-space:nowrap;
+  z-index:2;
+  pointer-events:none;
+}
+
+/* ภาพคำถาม (อยู่หลังกล่องคำถาม) */
+/* ===== ภาพคำถาม Q1 (ขนาดคงที่) ===== */
+#questionImg{
+  position:absolute;
+  top: var(--qimg-top, -300px);
+  left:50%;
+  transform: translate(calc(-50% + var(--qimg-x, 0px)), var(--qimg-y, -80px));
+
+  /* ✅ คงที่: 800px (เปลี่ยนเลขนี้ได้ตามต้องการ) */
+  width: 800px;
+    max-width: 90vw;   /* กันล้นจอเล็ก */
+  height: auto;
+
+  /* ปิดการย่อ-ขยายอัตโนมัติ */
+  max-width: none;
+
+  z-index:0;
+  opacity:.9;
+  pointer-events:none;
+  display:none;
+}
+
+@media (max-width: 1024px){
+  #questionImg{ width: 640px; }
+  #questionBox{ font-size: 56px; }
+  .option{ width: 360px; height: 248px; }
+}
+
+@media (max-width: 768px){
+  #questionImg{ width: 520px; }
+  #questionBox{ font-size: 44px; }
+  .option{ width: 300px; height: 210px; }
+}
+
+@media (max-width: 480px){
+  #questionImg{ width: 360px; }
+  #questionBox{ font-size: 32px; }
+  .option{ width: 240px; height: 168px; }
+}
+
+
+/* ===== แถบจับเวลา ===== */
+#timebarWrap{ position:fixed; left:0; right:0; bottom:0; height:12px; background:rgba(255,255,255,.12); z-index:16000; border-top:1px solid rgba(255,255,255,.2) }
+#timebar{
+  height:100%;
+  width:0%;
+  background:#10b981;              /* เริ่มเขียวล้วน */
+  transition: width .1s linear;     /* ให้ JS คุมสีแทน */
+}
+
+
+/* ===== เอฟเฟกต์แฟลชเคลียร์จอ ===== */
+#flash{ position:fixed; inset:0; background:transparent; pointer-events:none; z-index:17000 }
+.flash-green{ animation: flashG 300ms ease-out }
+.flash-red{ animation: flashR 300ms ease-out }
+@keyframes flashG{ 0%{background:rgba(16,185,129,.35)} 100%{background:transparent} }
+@keyframes flashR{ 0%{background:rgba(239,68,68,.35)} 100%{background:transparent} }
+.flash-clear{ animation: flashC 2000ms ease-out }
+@keyframes flashC{ 0%{background:rgba(255,255,255,.55)} 100%{background:transparent} }
+
+/* ===== Flash-in effect (ใช้กับ #roundToast และ #ansImg) ===== */
+.flash-in{
+  animation: flashIn .35s ease-out;
+}
+
+@keyframes flashIn{
+  0%{
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.04);
+    box-shadow:
+      0 0 0 0 rgba(255,255,255,0),
+      0 0 0 0 rgba(255,255,255,0);
+  }
+  30%{
+    opacity: 1;
+    box-shadow:
+      0 0 24px 6px rgba(255,255,255,.75),
+      0 0 64px 12px rgba(255,255,255,.55);
+  }
+  100%{
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: none;
+  }
+}
+
+/* ===== Flash-in effect (สำหรับภาพเต็มจอ) ===== */
+.flash-in-cover{
+  animation: flashInCover .35s ease-out;
+}
+
+@keyframes flashInCover{
+  0%{
+    opacity: 0;
+    box-shadow:
+      0 0 0 0 rgba(255,255,255,0),
+      0 0 0 0 rgba(255,255,255,0);
+  }
+  30%{
+    opacity: 1;
+    box-shadow:
+      0 0 24px 6px rgba(255,255,255,.75),
+      0 0 64px 12px rgba(255,255,255,.55);
+  }
+  100%{
+    opacity: 1;
+    box-shadow: none;
+  }
+}
+
+/* ช่วยให้แอนิเมชันลื่น */
+#roundToast, #ansImg{ will-change: opacity, transform, box-shadow; }
+
+
+/* ===== Toast รอบ (แก้ให้อยู่กลางจอ) ===== */
+#roundToast{
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  background: rgba(0,0,0,.78);
+  border: 1px solid rgba(255,255,255,.22);
+  padding: 18px 26px;
+  border-radius: 16px;
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 900;
+  z-index: 17500;
+  display: none;
+  text-align: center;
+
+  /* 👇 ให้ขนาด “ตามความยาวบรรทัดจริง” */
+    width: auto;             /* ไม่ล็อกความกว้าง */
+  max-width: none;         /* ไม่จำกัด */
+  white-space: nowrap;     /* ไม่ตัดคำในบรรทัดเดียวเอง */
+  line-height: 1.25;
+}
+
+/* สไตล์บรรทัดย่อย */
+#roundToast .q{ display:block; }
+#roundToast .a{ display:block; margin-top:.15em; opacity:.95; }
+#roundToast .r{ display:block; margin-top:.35em; font-weight:1000; }
+#roundToast .r.ok{ color: var(--ok); }
+#roundToast .r.bad{ color: var(--bad); }
+
+
+
+/* ===== ภาพแสดงหลังกล่องผลลัพธ์ ===== */
+#ansImg{
+  position: fixed;
+  inset: 0;              /* ครอบเต็ม viewport */
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;     /* เต็มจอแบบรักษาสัดส่วน */
+  object-position: center;
+  opacity: .95;
+  filter: drop-shadow(0 20px 60px rgba(0,0,0,.50));
+  z-index: 17499;        /* ใต้ #roundToast */
+  display: none;
+  pointer-events: none;
+  transform: none;       /* ไม่ใช้ translate(-50%,-50%) แล้ว */
+}
+
+
+/* ===== กล้อง / แคนวาส AR ===== */
+#cameraMirror{ position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; transform: scaleX(-1); z-index:1; display:none; background:#000 }
+#camCanvas{ position:fixed; inset:0; width:100vw; height:100vh; z-index:2; pointer-events:none; display:none }
+#game{ z-index:3; position:relative }
+
+/* ===== ปุ่ม Mute / Fullscreen ===== */
+#muteBtn, #fsBtn{ position:fixed; right:12px; width:44px; height:44px; border-radius:999px; background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.3); color:#fff; font-size:18px; line-height:1; display:grid; place-items:center; cursor:pointer; z-index:10000 }
+#muteBtn{ bottom:12px }
+#fsBtn{ bottom:62px }
+
+/* ===== มุมซ้าย/ขวาบนภาพประดับ ===== */
+body::after{ content:""; position: fixed; top: 0; left: 0; width: var(--corner-img-w, 220px); height: var(--corner-img-h, 220px); background: url("image/button1.png") no-repeat left top / contain; pointer-events: none; z-index: 10000 }
+body::before{ content:""; position: fixed; top: 0; right: 0; width: var(--corner2-img-w, 200px); height: var(--corner2-img-h, 200px); background: url("image/button2.png") no-repeat right top / contain; pointer-events: none; z-index: 10000 }
+
+/* ===== วางข้อความด้วยเปอร์เซ็นต์ของกรอบรูป ===== */
+.option { position: absolute; } /* มีอยู่แล้วก็ข้าม */
+.option .opt-label{
+  position:absolute;
+  /* ใช้พิกัดเปอร์เซ็นต์ที่เราส่งมาจาก JS */
+  left: var(--label-left, 50%);
+  top:  var(--label-top, 50%);
+  transform: translate(-50%,-50%);
+  white-space:nowrap;
+  font-weight:900;
+  color:#fff;
+  text-shadow:0 3px 10px rgba(0,0,0,.6);
+  pointer-events:none;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ==== AR Mirror ==== -->
+<video id="cameraMirror" playsinline muted></video>
+<canvas id="camCanvas"></canvas>
+
+<div id="game" aria-label="สนามเกม">
+  <img id="questionImg" src="" alt="ภาพคำถาม" />
+  <div id="questionBox" aria-live="polite"></div>
+</div>
+
+<!-- ===== Welcome (หน้าสุด) ===== -->
+<div id="welcome" role="dialog" aria-modal="true">
+  <div class="welcome-content">
+    <div class="brand">
+      <img src="image/banner2.png" alt="Banner">
+    </div>
+    <button id="enterBtn">เข้าสู่เกม</button>
+  </div>
+</div>
+
+
+<!-- ===== Landing ===== -->
+<div id="landing" role="dialog" aria-modal="true" class="hide">
+  <div class="brand"><img src="image/banner2.png" alt="Banner"></div>
+  <div class="level-menu">
+    <button class="levelBtn" data-level="0" data-src="levels/level1.json">การเปลี่ยนสถานะของสาร</button>
+       <button class="levelBtn" data-level="1" data-src="levels/level2.json">สถานะของสาร</button>
+    <button class="levelBtn" id="guideBtn">กติกาการเล่น 📖</button>
+  </div>
+</div>
+
+<!-- ===== ภารกิจ / หน้าเริ่ม ===== -->
+<div id="startScreen">
+  <div id="startTitle">ภารกิจ: ตอบคำถาม โดยเลือกจากให้ถูกต้อง</div>
+  <button id="startBtn">เริ่ม</button>
+  <div id="countdown">3</div>
+</div>
+
+<!-- ===== คู่มือ ===== -->
+<div id="guideScreen">
+  <div class="guide-wrap">
+    <img src="image/guide.png" alt="คู่มือเกม">
+    <button id="guideBack" class="btn-mini guide-close">เมนูหลัก</button>
+  </div>
+</div>
+
+<!-- ===== HUD ===== -->
+<div class="hud">
+  <div class="left">
+    <div class="stack">
+      <div style="display:flex; gap:8px;">
+        <button id="quickRestart" class="btn-mini">หน้าหลัก</button>
+        <button id="pauseBtn" class="btn-mini">⏸ หยุด</button>
+        <button id="camBtn" class="btn-mini">📷: ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="stack" style="align-items:flex-end">
+      <div class="score-label">คะแนน</div>
+      <div id="goldWrap" class="pill gold" aria-live="polite" title="คะแนน"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== แถบจับเวลา 5 วิ ล่างจอ ===== -->
+<div id="timebarWrap" aria-hidden="true"><div id="timebar"></div></div>
+<div id="flash"></div>
+<div id="roundToast"></div>
+<img id="ansImg" src="" alt="answer background">
+
+
+<!-- ===== ป๊อปอัปจบด่าน ===== -->
+<div id="overlay">
+  <div class="panel">
+    <h1 id="endTitle">จบด่าน</h1>
+    <p>คะแนนสุดท้าย: <b id="finalScore">0</b></p>
+    <p>จำนวนรอบ: <b id="finalRounds">0</b></p>
+    <div class="actions">
+      <button class="btn" id="restartBtn">เริ่มใหม่</button>
+      <button class="btn" id="selectLevelBtn">กลับสู่หน้าหลัก</button>
+      <button class="btn" id="nextLevelBtn">ด่านถัดไป</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== เสียง ===== -->
+<audio id="hitSound" preload="auto" src="image/audio1.mp3"></audio>
+<audio id="winSound" preload="auto" src="image/win2.mp3"></audio>
+<audio id="bgm" preload="auto" loop src="image/bgm3.mp3"></audio>
+<audio id="selectSound" preload="auto" src="image/select.mp3"></audio>
+
+
+<!-- ===== ปุ่ม Mute / Fullscreen ===== -->
+<button id="muteBtn" aria-pressed="false" title="Mute / Unmute">🔊</button>
+<button id="fsBtn" aria-pressed="false" title="เข้าสู่โหมดเต็มจอ">⛶</button>
+
+<!-- ===== ควบคุม Mute ===== -->
+<script>
+(function(){
+  const muteBtn = document.getElementById('muteBtn');
+  if(!muteBtn) return;
+  let isMuted = false;
+  function applyMute(m){
+    isMuted = !!m;
+    document.querySelectorAll('audio').forEach(a => { a.muted = isMuted; if(isMuted){ a.setAttribute('muted',''); } else { a.removeAttribute('muted'); } });
+    muteBtn.setAttribute('aria-pressed', String(isMuted));
+    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+  }
+  muteBtn.addEventListener('click', () => applyMute(!isMuted));
+})();
+</script>
+
+<!-- ===== ควบคุม Fullscreen ===== -->
+<script>
+(function(){
+  const fsBtn = document.getElementById('fsBtn');
+  if (!fsBtn) return;
+  function fsEnabled(){ return document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled }
+  function isFull(){ return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement }
+  function requestFS(){ const el=document.documentElement; (el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen)?.call(el) }
+  function exitFS(){ (document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen)?.call(document) }
+  function render(){ const on=!!isFull(); fsBtn.setAttribute('aria-pressed', String(on)); fsBtn.title = on ? 'ออกจากโหมดเต็มจอ' : 'เข้าสู่โหมดเต็มจอ'; fsBtn.textContent = on ? '🗗' : '⛶' }
+  if (!fsEnabled()){ fsBtn.style.display='none'; return }
+  fsBtn.addEventListener('click', () => { if(isFull()) exitFS(); else requestFS() });
+  document.addEventListener('fullscreenchange', render);
+  document.addEventListener('webkitfullscreenchange', render);
+  document.addEventListener('msfullscreenchange', render);
+  render();
+})();
+</script>
+
+<!-- ===== ระบบเกมแบบช้อยส์ ===== -->
+<script>
+(()=>{
+  /* ---------- DOM refs ---------- */
+  const game = document.getElementById('game');
+  const qBox = document.getElementById('questionBox');
+  const timebar = document.getElementById('timebar');
+  const timebarWrap = document.getElementById('timebarWrap');
+  const flash = document.getElementById('flash');
+  const toast = document.getElementById('roundToast');
+
+  const overlay = document.getElementById('overlay');
+  const endTitleEl = document.getElementById('endTitle');
+  const finalScoreEl = document.getElementById('finalScore');
+  const finalRoundsEl = document.getElementById('finalRounds');
+  const restartBtn = document.getElementById('restartBtn');
+  const selectLevelBtn = document.getElementById('selectLevelBtn');
+  const nextLevelBtn = document.getElementById('nextLevelBtn');
+
+  const scoreEl = document.getElementById('score');
+  const roundEl = document.getElementById('round');
+const goldWrap = document.getElementById('goldWrap');
+const GOLD = '💎'; // หรือเปลี่ยนเป็นอีโมจิทองคำแท่ง 🪙 💰 ได้
+
+// ===== Welcome -> Landing =====
+(function(){
+  const welcome = document.getElementById('welcome');
+  const enterBtn = document.getElementById('enterBtn');
+  const landing = document.getElementById('landing');
+  if(!welcome || !enterBtn || !landing) return;
+
+  enterBtn.addEventListener('click', ()=>{
+    welcome.classList.add('hide');
+    landing.classList.remove('hide');
+  });
+})();
+
+function renderGold(score){
+  if(!goldWrap) return;
+  goldWrap.innerHTML = '';
+  for(let i=0;i<score;i++){
+    const span = document.createElement('span');
+    span.className = 'bar';
+    span.textContent = GOLD;
+    goldWrap.appendChild(span);
+  }
+  goldWrap.setAttribute('aria-label', `คะแนน ${score}`);
+}
+
+
+  const hitSound = document.getElementById('hitSound');
+  const winSound = document.getElementById('winSound');
+  const bgm = document.getElementById('bgm');
+  const selectSound = document.getElementById('selectSound');
+
+/* ===== Backend per-sound volume (0..1) ===== */
+const VOL_BGM    = 0.35; // เพลงพื้นหลัง
+const VOL_SELECT = 0.75; // เสียงเลือก/เปลี่ยนช้อยส์
+const VOL_HIT    = 0.75; // เสียงจบรอบ (ถูก/ผิด)
+const VOL_WIN    = 0.85; // เสียงชนะด่าน
+
+function applyBackendVolume(){
+  if (bgm) bgm.volume = VOL_BGM;
+  if (selectSound) selectSound.volume = VOL_SELECT;
+  if (hitSound)    hitSound.volume    = VOL_HIT;
+  if (winSound)    winSound.volume    = VOL_WIN;
+}
+applyBackendVolume();
+
+/* เคารพสถานะ mute ของระบบ */
+function isGlobalMuted(){
+  const a = document.querySelector('audio');
+  return !!a && a.muted === true;
+}
+
+/* เล่น SFX โดยกำหนดโวลุ่มต่อครั้ง + เคารพ mute */
+function playSfx(el, vol){
+  try{
+    const n = el?.cloneNode(true);
+    if(!n) return;
+    n.volume = typeof vol === 'number' ? Math.max(0, Math.min(1, vol)) : (el.volume ?? 1);
+    n.muted  = isGlobalMuted();
+    n.play?.();
+  }catch(_){}
+}
+
+
+
+
+  // util
+  const rand = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
+  const pick = (arr)=> arr[rand(0,arr.length-1)];
+
+  function buildWord_L1(){
+    const c = pick(CONS);
+    const v = pick(VOW_SIMPLE);
+    const q = `${c}-${v}`;
+    const ans = combine(c, v, "");
+    return { question:q, answer:ans, pieces:[c,v] };
+  }
+  function buildWord_L2(){
+    const c = pick(CONS);
+    const v = pick([...VOW_SIMPLE, "อา", "อิ", "อุ"]);
+    const f = pick(FINAL_SET);
+    const q = `${c}-${v}-${f}`;
+    const ans = combine(c, v, f);
+    return { question:q, answer:ans, pieces:[c,v,f] };
+  }
+  function buildWord_L3(){
+    const c = pick(CONS);
+    const patterns = [
+      { show:`เ-${c}-ะ`, make: (c)=> `เ${c}ะ` },
+      { show:`เ-${c}-า`, make: (c)=> `เ${c}า` },
+      { show:`ไ-${c}`,   make: (c)=> `ไ${c}` },
+      { show:`ใ-${c}`,   make: (c)=> `ใ${c}` },
+      { show:`โ-${c}`,   make: (c)=> `โ${c}` }
+    ];
+    const p = pick(patterns);
+    const question = p.show.replaceAll(c, "-").replace("-", c);
+    const ans = p.make(c);
+    return { question, answer: ans, pieces:[c] };
+  }
+  function buildWord_L4(){
+    const c = pick(CONS);
+    const patterns = [
+      { q:`${c}-ว-า`, a:`${c}วา` },
+      { q:`${c}-ว-ิ`, a:`${c}วิ` },
+      { q:`${c}-ย-า`, a:`${c}ยา` },
+      { q:`${c}-ร-า`, a:`${c}รา` }
+    ];
+    const p = pick(patterns);
+    return { question:p.q, answer:p.a, pieces:[c] };
+  }
+
+  function combine(c, v, f){
+    const full = ["เอ","โอ","ไอ","ใอ","อา","อิ","อุ"];
+    if(full.includes(v)) return (v + c + (f||""));
+    return (c + v + (f||""));
+  }
+
+  function makeDistractors(answer){
+    const set = new Set([answer]);
+    while(set.size < 4){
+      let a = answer.split("");
+      const idx = rand(0, Math.max(0,a.length-1));
+      if(/[เโไใอ]/.test(a[0]) && idx===0){
+        const choices = ["เ","โ","ไ","ใ"]; a[0] = pick(choices);
+      }else{
+        const repl = pick([...CONS, ...FINAL_SET]);
+        a[idx] = repl;
+      }
+      set.add(a.join(""));
+    }
+    return shuffle(Array.from(set)).slice(0,4);
+  }
+  function shuffle(arr){ const A=arr.slice(); for(let i=A.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [A[i],A[j]]=[A[j],A[i]] } return A }
+
+// ===== Glow เฉพาะรูปภาพตัวเลือก =====
+function clearOptionGlows(){
+  document.querySelectorAll('.opt-bg').forEach(img => {
+    img.style.transition = '';
+    img.style.filter = '';
+  });
+}
+function glowGold(img){
+  if(!img) return;
+  img.style.transition = 'filter .14s ease';
+  img.style.filter =
+    'brightness(1.05) ' +
+    'drop-shadow(0 0 10px rgba(250,204,21,.70)) ' +
+    'drop-shadow(0 0 18px rgba(250,204,21,.55))';
+}
+
+
+  /* ---------- สถานะเกม ---------- */
+  const MAX_ROUNDS = 10; 
+    const WIN_SCORE = 5; 
+    const ROUND_TIME = 10;
+  const BLANK_MS=3000, Q_DROP_MS=2000, Q_HOLD_MS=3000, OPT_IN_MS=2000, RESULT_MS=3000;
+  let selectedLevel = 0;
+  let running=false, ended=false, paused=false;
+  let score=0, round=0; 
+  let roundTimer=null; 
+  let timeLeft=ROUND_TIME; 
+  let awaitingAnswer=false; 
+  let correctThisRound="";
+// เก็บคำตอบที่ผู้เล่น “เลือกไว้” เพื่อรอให้หมดเวลาแล้วค่อยตัดสิน
+let selectedEl = null;
+let selectedText = '';
+let selectedOk = null; // true/false หรือ null (ยังไม่เลือก)
+
+
+  function updateHUD(){
+  renderGold(score);
+}
+  function resetState(){ score=0; round=0; timeLeft=ROUND_TIME; awaitingAnswer=false; correctThisRound=""; updateHUD(); qBox.style.top='-160px'; clearRoundObjects(); stopTimebar() }
+  function clearRoundObjects(){ document.querySelectorAll('.option').forEach(n=>n.remove()) }
+  
+function showToast(payload){
+  const ansImg = document.getElementById('ansImg');
+
+  // รับรูปแบบใหม่ { q, a, ok } (ถ้าเป็นสตริงเก่า จะ fallback เป็น q)
+  const data = (typeof payload === 'object' && payload) ? payload : { q:String(payload||''), a:'', ok:false };
+  const { q = '', a = '', ok = false } = data;
+
+  // escape HTML กันหลุด
+  const esc = (s)=> String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+
+  // จัด 3 บรรทัด: 1) คำถาม (ไม่มี '=')  2) คำตอบที่เลือก  3) ถูกต้อง/ไม่ถูกต้อง
+  const qHTML = esc(q);
+  const aHTML = esc(a || '—');
+  const rHTML = ok ? 'ถูกต้อง' : 'ไม่ถูกต้อง';
+
+  toast.innerHTML = `
+    <span class="q">${qHTML}</span>
+    <span class="a">${aHTML}</span>
+    <span class="r ${ok?'ok':'bad'}">${rHTML}</span>
+  `;
+  toast.style.display = 'inline-block'; // ให้กว้างเท่าคอนเทนต์
+
+  // ถ้ามีภาพ ans1 (เต็มจอ) ก็โชว์คู่กันได้ (ไม่บังคับ)
+  if (ansImg){
+    ansImg.onerror = () => { ansImg.style.display = 'none'; };
+    ansImg.src = 'image/ans1.png';   // เปลี่ยนสกุลตามไฟล์จริงถ้าไม่ใช่ .png
+    ansImg.style.display = 'block';
+  }
+
+  // เอฟเฟกต์แฟลช (ถ้าคุณมีคลาส .flash-in / .flash-in-cover ตามที่เคยเพิ่ม)
+  const playFlashIn = (el, cover = false)=>{
+    if(!el) return;
+    el.classList?.remove('flash-in','flash-in-cover');
+    void el.offsetWidth;
+    el.classList?.add(cover ? 'flash-in-cover' : 'flash-in');
+    el.addEventListener?.('animationend', ()=> el.classList?.remove('flash-in','flash-in-cover'), { once:true });
+  };
+  playFlashIn(ansImg, true);
+  playFlashIn(toast, false);
+
+  // ซ่อนตามเวลา RESULT_MS เดิม
+  setTimeout(()=>{
+    toast.style.display = 'none';
+    if(ansImg) ansImg.style.display = 'none';
+  }, RESULT_MS);
+}
+
+
+
+
+  function startTimebar(){ timeLeft = ROUND_TIME; timebar.style.width = '0%'; timebarWrap.style.opacity = '1'; }
+  function stopTimebar(){ timebar.style.width='0%'; }
+  function updateTimebar(){
+  // frac = สัดส่วน "เวลาที่เหลือ" (1 = เหลือเต็ม, 0 = หมด)
+  const frac = Math.max(0, Math.min(1, timeLeft / ROUND_TIME));
+
+  // ความกว้างที่แสดง "เวลาที่ผ่านไป" เหมือนเดิม
+  const elapsed = 1 - frac;
+  timebar.style.width = (elapsed * 100).toFixed(1) + '%';
+
+  // สีทั้งหลอด: เขียว (120°) → แดง (0°) ตาม "เวลาเหลือ"
+  const hue = 120 * frac; // 120=เขียว, 0=แดง
+  const col = `hsl(${hue}, 90%, 45%)`;
+  timebar.style.backgroundColor = col;
+
+  // (ทางเลือก) เพิ่มเงาให้เข้มขึ้นตามสี
+  // timebar.style.boxShadow = `0 0 12px ${col}66`;
+}
+
+
+  function dropQuestion(text){
+    const qImg = document.getElementById('questionImg');
+    qBox.textContent = String(text).replace(/\s*\|\s*/g, '\n'); 
+// ใช้ '|' เป็นตัวคั่นบรรทัด → จะแปลงเป็น \n
+    qImg.style.display = 'block';
+    qBox.style.display = 'block';
+    qBox.style.transition = 'none';
+    qImg.style.transition = 'none';
+    qBox.style.top = '-200px';
+    qImg.style.top = '-300px';
+    qBox.style.opacity = '1';
+    qImg.style.opacity = '1';
+    qImg.onload = null;
+    qImg.src = 'image/Q1.png';
+    requestAnimationFrame(()=>{
+      void qBox.offsetWidth; void qImg.offsetWidth;
+      requestAnimationFrame(()=>{
+        const easing = `top ${Q_DROP_MS}ms cubic-bezier(.2,.9,.2,1)`;
+        qBox.style.transition = easing;
+        qImg.style.transition = easing;
+        qImg.style.top = '20px';
+        qBox.style.top = '60px';
+      });
+    });
+  }
+
+ /* ---------- ฟังก์ชันสร้างช้อยส์จากคลัง (รับช้อยส์ถูก/ผิด) ---------- */
+function spawnOptions(correct, wrongs){
+  // ✅ สร้างชุดตัวเลือกให้ครบ 4 ตัว (กันพลาดถ้าใส่ wrong มาไม่ครบ)
+  const wrongArr = Array.isArray(wrongs) ? wrongs.slice(0, 3) : [];
+  while (wrongArr.length < 3) wrongArr.push('—');
+  const items = shuffle([correct, ...wrongArr]);
+
+  // 0=บนซ้าย, 1=ล่างซ้าย, 2=บนขวา, 3=ล่างขวา
+  const midY  = Math.round(window.innerHeight * 0.58);
+  const laneY = [ -70, +70, -70, +70 ];
+  const leftStop  = 40;
+  const rightStop = window.innerWidth - 40;
+
+  // ✅ คง logic สกิน + พิกัดข้อความแบบเปอร์เซ็นต์ของคุณไว้ครบ
+  const SKINS = [
+    { file:'image/A1.png', lx:60, ly:46, labelScale:0.16 },
+    { file:'image/A2.png', lx:60, ly:47, labelScale:0.16 },
+    { file:'image/A3.png', lx:40, ly:48, labelScale:0.16 },
+    { file:'image/A4.png', lx:40, ly:48, labelScale:0.16 },
+  ];
+
+  // ✅ ขนาดฮิตบ็อกซ์/ออฟเซ็ต (ของเดิมคุณ)
+  const TUNING = [
+    { w:448, h:308, imgX:-70, imgY:-150, labelX:0, labelY:-200 },
+    { w:448, h:308, imgX:-70, imgY:10,   labelX:0, labelY:  0 },
+    { w:448, h:308, imgX:70,  imgY:-150, labelX:0, labelY:-200 },
+    { w:448, h:308, imgX:70,  imgY:10,   labelX:0, labelY: -6 },
+  ];
+
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElement('div');
+    el.className = 'option ' + (i < 2 ? 'left' : 'right');
+
+    const isCorrect = (items[i] === correct);
+    el.dataset.correct = String(isCorrect);
+
+    const img = document.createElement('img');
+    img.className = 'opt-bg';
+    img.src = SKINS[i].file;
+    img.alt = `ตัวเลือก ${i+1}`;
+
+    const label = document.createElement('span');
+label.className = 'opt-label';
+label.innerHTML = (items[i] || "").replace(/\n/g, "<br>");
+
+
+    el.appendChild(img);
+    el.appendChild(label);
+
+    // วางแนวตั้งตามเลน
+    el.style.top = (midY + laneY[i]) + 'px';
+
+    // เริ่มนอกจอ
+    if (i < 2) { el.style.left  = '-320px'; el.style.right = ''; }
+    else       { el.style.right = '-320px'; el.style.left  = ''; }
+
+    // ยิงค่าปรับแต่งเข้า CSS variables (ฮิตบ็อกซ์ + ออฟเซ็ต)
+    const t = TUNING[i] || {};
+    if (t.w != null)      el.style.setProperty('--img-w', `${t.w}px`);
+    if (t.h != null)      el.style.setProperty('--img-h', `${t.h}px`);
+    if (t.imgX != null)   el.style.setProperty('--opt-offset-x', `${t.imgX}px`);
+    if (t.imgY != null)   el.style.setProperty('--opt-offset-y', `${t.imgY}px`);
+    if (t.labelX != null) el.style.setProperty('--label-offset-x', `${t.labelX}px`);
+    if (t.labelY != null) el.style.setProperty('--label-offset-y', `${t.labelY}px`);
+
+    // ✅ พิกัดข้อความแบบเปอร์เซ็นต์ (ฝังไปกับสกิน)
+    const skin = SKINS[i] || {};
+    el.style.setProperty('--label-left', (skin.lx ?? 50) + '%');
+    el.style.setProperty('--label-top',  (skin.ly ?? 50) + '%');
+
+    // ✅ ขนาดฟอนต์สัมพันธ์กับความสูงกรอบจริง
+    function sizeLabel() {
+      const box = el.getBoundingClientRect();
+      const scale = skin.labelScale ?? 0.16; // 16% ของความสูง
+      label.style.fontSize = Math.round(box.height * scale) + 'px';
+    }
+    requestAnimationFrame(sizeLabel);
+    window.addEventListener('resize', sizeLabel);
+
+    game.appendChild(el);
+
+    // 2 เฟรมให้ transition ทำงาน
+    requestAnimationFrame(() => {
+      void el.offsetWidth;
+      requestAnimationFrame(() => {
+        if (i < 2) { el.style.left  = leftStop + 'px'; }
+        else       { el.style.right = (window.innerWidth - rightStop) + 'px'; }
+      });
+    });
+
+    el.addEventListener('click', () => tryAnswer(el));
+  }
+}
+
+
+  function tryAnswer(el){
+  if(!awaitingAnswer) return;
+
+    // ✅ อนุญาตเปลี่ยนคำตอบได้เรื่อย ๆ ก่อนหมดเวลา: เก็บ "คำตอบล่าสุด"
+  selectedEl   = el;
+  selectedText = (el.textContent || '').trim();
+  selectedOk   = (el.dataset.correct === 'true');
+
+  // ✅ ใส่เงาทองเฉพาะรูปภาพที่เลือก (เอฟเฟกต์ทันที แต่ยังไม่เฉลย)
+  clearOptionGlows();
+  const img = el.querySelector('.opt-bg');
+  glowGold(img);
+  playSelect(); // ▶️ เล่นเสียงทุกครั้งที่คลิกเลือก/เปลี่ยนตัวเลือก
+
+  // เก็บผลไว้รอ “หมดเวลา” ค่อยตัดสิน
+  selectedEl = el;
+  selectedText = (el.textContent||'').trim();
+  selectedOk = (el.dataset.correct === 'true');
+
+  // หมายเหตุ: ถ้าอยาก “ให้เปลี่ยนใจได้” ก่อนหมดเวลา
+  // ให้ลบบรรทัด if(selectedEl) return; ด้านบน แล้วเปลี่ยน selectedEl/selectedText/selectedOk ทุกครั้งที่คลิกใหม่
+}
+
+function playSelect(){
+  try{
+    (selectSound?.cloneNode(true)).play?.();
+  }catch(_){}
+}
+
+
+  function endRound(ok, pickText, timeout=false){
+  clearInterval(roundTimer);
+  stopTimebar();
+
+  // ✅ ย้ายการนับคะแนนมาไว้ตรงนี้
+try{ hitSound?.cloneNode(true).play?.() }catch(_){}  
+if(ok){
+    score++;
+  }
+  updateHUD();
+
+  // ใหม่: ส่งเป็นอ็อบเจ็กต์ 3 ส่วน (คำถาม / คำตอบที่เลือก / ผลลัพธ์)
+const qText = (qBox.textContent || '')
+  .replace(/\s*=\s*.*$/,'')      // กันเผื่อมี '=' ติดมา → ตัดทิ้ง
+  .replace(/\s*\n\s*/g, ' ')     // บีบ \n ให้เป็นช่องว่างเดียว
+  .trim();
+
+const picked = (pickText && pickText.trim()) ? pickText.trim() : '—';
+
+showToast({ q: qText, a: picked, ok });
+    setTimeout(() => {
+      const fadeOutInstant = (el) => {
+        if (!el) return;
+        el.style.transition = 'none';
+        el.style.willChange = 'auto';
+        void el.offsetWidth;
+        el.style.opacity = '0';
+        el.style.pointerEvents = 'none';
+      };
+      fadeOutInstant(qBox);
+      const qImg = document.getElementById('questionImg');
+      fadeOutInstant(qImg);
+      document.querySelectorAll('.option').forEach(fadeOutInstant);
+      timebarWrap.style.opacity = '0';
+
+      const flash = document.getElementById('flash');
+      flash.className = '';
+      void flash.offsetWidth;
+      flash.classList.add('flash-clear');
+
+      flash.addEventListener('animationend', () => {
+        clearRoundObjects();
+        qBox.textContent = '';
+        const qi = document.getElementById('questionImg');
+        qi.style.display = 'none'; qi.removeAttribute('src'); qi.style.top = '-300px'; qi.style.opacity = '1';
+        qBox.style.top = '-200px'; qBox.style.opacity = '1';
+        timebarWrap.style.opacity = '1'; toast.style.display = 'none';
+
+        round++; updateHUD();
+        if (score >= WIN_SCORE || round >= MAX_ROUNDS) { endLevel(); return; }
+        nextRound();
+      }, { once: true });
+    }, RESULT_MS);
+  }
+
+/* ---------- คลังคำถามกองเดียว (ไม่มีเซต) ---------- */
+/* ใส่คำถามเพิ่มได้เรื่อย ๆ ตามฟอร์แมตข้างล่าง: */
+
+// ===== ชุดคำถามแยกตามด่าน =====
+const QUESTION_BANKS = {
+  0: [ // ด่านที่ 1 : การเปลี่ยนสถานะของสาร (ของเดิม)
+    
+  { question: "ข้อใดใช้ประโยชน์จาก\nการระเหยกลายเป็นไอ",
+    correct: "การตากผ้า", wrong: ["การซักผ้า","การปั่นแห้ง","การแช่ผ้า"] },
+
+{ question: "ข้อใดเกิดจาก\nการระเหยกลายเป็นไอ",
+    correct: "ผิวแห้ง", wrong: ["ผิวคล้ำ","ผิวชุ่มชื้น","ผิวตกกละ"] },
+
+  { question: "ข้อใดใช้ประโยชน์จาก\nการระเหยกลายเป็นไอ",
+    correct: "การใช้ไดร์เป่าผม", wrong: ["การสระผม","การหวีผม","การอบไอน้ำ"] },
+
+  { question: "อาหารชนิดใดเกิดจาก\nการระเหยกลายเป็นไอ",
+    correct: "ปลาหมึกแห้ง", wrong: ["แตงกวาดอง","ปลากระป๋อง","ซูชิ"] },
+
+  { question: "อาหารชนิดใดเกิดจาก\nการระเหยกลายเป็นไอ",
+    correct: "ลำไยอบแห้ง", wrong: ["ทุเรียนกวน","มังคุดคัด","วุ้นมะพร้าว"] },
+
+  { question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "เมฆ", wrong: ["ลม","ลูกเห็บ","ฟ้าผ่า"] },
+
+{ question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "น้ำแอร์", wrong: ["ควันท่อไอเสีย","ลมแอร์","เขม่าควัน"] },
+
+   { question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "การกลั่นสุรา", wrong: ["ขวดแก้ว","กระป๋อง","กุ้งแห้ง"] },
+
+   { question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "น้ำค้าง", wrong: ["น้ำแห้ง","น้ำเดือด","น้ำแข็ง"] },
+
+   { question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "ฝ้ากระจก", wrong: ["น้ำแข็งละลาย","ควันบุหรี่","อากาศร้อน"] },
+
+{ question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "หยดน้ำบนแก้วน้ำเย็น", wrong: ["สระน้ำที่น้ำแห้งลง","การเหี่ยวของผัก","อาการเหงื่อออก"] },
+
+   { question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "ฝน", wrong: ["ลูกเห็บ","ฟ้าร้อง","พายุหมุน"] },
+
+   { question: "ข้อใดเกิดจาก\nการควบแน่น",
+    correct: "หมอก", wrong: ["หิมะ","ลาวา","ก้อนหิน"] },
+
+  { question: "ข้อใดเกิดจาก\nการกลายเป็นไอ",
+    correct: "การฉีดน้ำหอม", wrong: ["การปะแป้ง","การทาโลชั่น","การล้างมือ"] },
+
+{ question: "ข้อใดสามารถ\nระเหยกลายเป็นไอได้",
+    correct: "แอลกอฮอล์ล้างแผล", wrong: ["สบู่ก้อน","แก๊สหุงต้ม","แป้งข้าวโพด"] },
+
+{ question: "ข้อใดสามารถ\nระเหยกลายเป็นไอได้",
+    correct: "น้ำอัดลม", wrong: ["ดิน","ใบไม้","ผงซักฟอก"] },
+
+{ question: "ข้อใดสามารถ\nระเหยกลายเป็นไอได้",
+    correct: "น้ำหอม", wrong: ["เหล็ก","แก๊สไนโตรเจน","น้ำตาล"] },
+
+{ question: "ข้อใดสามารถ\nระเหยกลายเป็นไอได้",
+    correct: "ไนโตรเจนเหลว", wrong: ["พริกป่น","น้ำมันพืช","เกลือ"] },
+
+{ question: "ข้อใดสามารถ\nระเหยกลายเป็นไอได้",
+    correct: "กาแฟ", wrong: ["เมล็ดกาแฟ","กระเทียม","เปลวไฟ"] },
+
+{ question: "ข้อใดสามารถ\nระเหิดกลายเป็นไอได้",
+    correct: "น้ำแข็งแห้ง", wrong: ["ทราย","เห็ด-รา","พลาสติก"] },
+
+{ question: "ข้อใดสามารถ\nระเหยกลายเป็นไอได้",
+    correct: "น้ำมันหอมระเหย", wrong: ["ขวดแก้ว","ผ้า","ลาวา"] },
+  ],
+
+  1: [ // ด่านที่ 2 : สถานะของสาร  ✅ (ใหม่)
+      { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "น้ำสะอาด", wrong: ["ทราย","แก๊สฮีเลียม","ก้อนหิน"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "น้ำมันพืช", wrong: ["เหล็กแท่ง","อากาศ","ไม้บรรทัด"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "แอลกอฮอล์ล้างแผล", wrong: ["เกลือเม็ด","ก๊าซไนโตรเจน","อิฐบล็อก"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "น้ำส้มสายชู", wrong: ["น้ำตาลทราย","ไอน้ำ","ยางลบ"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "นม", wrong: ["ดินแห้ง","ก๊าซโพรเพน","กระดานไม้"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "ปรอท", wrong: ["ทองคำแท่ง","ก๊าซออกซิเจน","ดินสอ"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "น้ำปลา", wrong: ["ควันรถ","หินอ่อน","พลาสติกแข็ง"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "น้ำเชื่อม", wrong: ["เกลือแกง","โอโซน","อิฐมอญ"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "น้ำยาล้างจาน", wrong: ["ทรายเปียก","ฮีเลียมก๊าซ","ทองแดงลวด"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของเหลว",
+    correct: "น้ำมันเชื้อเพลิง", wrong: ["ก้อนน้ำตาล","อากาศ","ถ่านหิน"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "เกลือแกง", wrong: ["น้ำมันเครื่อง","ก๊าซไนโตรเจน","น้ำ"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "น้ำตาลทราย", wrong: ["ไอน้ำ","แอลกอฮอล์","อากาศ"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "กระเบื้อง", wrong: ["น้ำเชื่อม","โพรเพน","นม"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "ก้อนหิน", wrong: ["น้ำส้มสายชู","คาร์บอนไดออกไซด์","น้ำมันพืช"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "ไม้ลูกชิ้น", wrong: ["น้ำปลา","ฮีเลียมก๊าซ","น้ำยาล้างจาน"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "แก้วน้ำ (เนื้อแก้ว)", wrong: ["นม","ไอน้ำ","น้ำมันเชื้อเพลิง"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "ยางลบ", wrong: ["น้ำ","ออกซิเจนก๊าซ","น้ำมันเครื่อง"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "ขวดพลาสติก", wrong: ["น้ำฝน","อากาศ","น้ำปลา"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "ทองคำแท่ง", wrong: ["ปรอท","ไอน้ำ","น้ำส้มสายชู"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นของแข็ง",
+    correct: "น้ำแข็ง", wrong: ["น้ำอุ่น","ก๊าซโอโซน","น้ำมันพืช"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "ฮีเลียมในลูกโป่ง", wrong: ["น้ำเชื่อม","เกลือแกง","ไม้บรรทัด"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "ก๊าซไนโตรเจน", wrong: ["น้ำมันพืช","หินอ่อน","น้ำตาลทราย"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "ก๊าซไข่เน่า", wrong: ["นม","แก้วน้ำ","ทราย"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "คาร์บอนไดออกไซด์", wrong: ["น้ำส้มสายชู","ทองคำแท่ง","น้ำยาล้างจาน"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "ก๊าซออกซิเจน", wrong: ["น้ำแข็ง","ปรอท","น้ำมันเครื่อง"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "โพรเพน (แก๊สหุงต้ม)", wrong: ["น้ำปลา","เกลือเม็ด","ก้อนอิฐ"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "ตด", wrong: ["น้ำผึ้ง","เหล็กแท่ง","น้ำ"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "ก๊าซไฮโดรเจน", wrong: ["น้ำมันเชื้อเพลิง","กระจก","น้ำตาลก้อน"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "ไอน้ำ", wrong: ["นมข้นหวาน","ก้อนหิน","เกลือแกง"] },
+
+  { question: "ข้อใด\nมีสถานะเป็นก๊าซ",
+    correct: "อากาศ", wrong: ["น้ำสะอาด","ทองคำแท่ง","น้ำแข็ง"] },
+  ]
+};
+
+// ตัวแปรกองที่ใช้งานจริงต่อรอบ (จะถูกเซ็ตตอนเริ่มด่าน)
+let QUESTION_BANK = [];
+
+
+/* ---------- สุ่มลำดับข้อตามกองเดียว ---------- */
+let __qOrder = [];
+let __qIdx = 0;
+
+function shuffle(arr){
+  const A = arr.slice();
+  for(let i=A.length-1;i>0;i--){
+    const j=(Math.random()*(i+1))|0;
+    [A[i],A[j]]=[A[j],A[i]];
+  }
+  return A;
+}
+
+function drawQuestion(){
+  if (!QUESTION_BANK.length){
+    return { question:"(ยังไม่มีข้อคำถาม)", correct:"-", wrong:["x","x","x"] };
+  }
+  if (!__qOrder.length || __qIdx >= __qOrder.length){
+    __qOrder = shuffle([...Array(QUESTION_BANK.length).keys()]);
+    __qIdx = 0;
+  }
+  const q = QUESTION_BANK[ __qOrder[__qIdx] ];
+  __qIdx++;
+  return q; // {question, correct, wrong}
+}
+
+
+
+  function nextRound(){
+  clearRoundObjects(); 
+  awaitingAnswer=false; 
+  stopTimebar();
+  selectedEl = null;
+  selectedText = '';
+  selectedOk = null;
+
+  qBox.textContent=''; 
+  qBox.style.top='-200px';
+
+  setTimeout(()=>{
+    // ✅ ดึงข้อจาก “กองเดียว”
+    const { question, correct, wrong } = drawQuestion();
+    correctThisRound = correct;
+
+    dropQuestion(question);
+
+    setTimeout(()=>{
+      // ✅ ส่งช้อยส์ (ยังสุ่มตำแหน่งเหมือนเดิม)
+      spawnOptions(correct, wrong);
+
+      setTimeout(()=>{
+        startTimebar();
+        startRoundTimer();
+      }, OPT_IN_MS);
+    }, Q_DROP_MS + Q_HOLD_MS);
+
+  }, BLANK_MS);
+}
+
+
+  function startRoundTimer(){
+    timeLeft = ROUND_TIME; awaitingAnswer=true; updateTimebar();
+    const TICK=100; let last = performance.now();
+    roundTimer = setInterval(()=>{
+      const now = performance.now(); const dt = (now-last)/1000; last=now;
+      timeLeft -= dt; updateTimebar();
+      if(timeLeft<=0){
+  awaitingAnswer=false;
+  clearInterval(roundTimer);
+
+  // ✅ ถ้าเลือกไว้แล้ว ใช้ผลที่เลือก; ถ้าไม่เลือก ถือว่า “ผิด”
+  const ok = (selectedOk === true);
+  const txt = selectedText || '';
+
+  endRound(ok, txt, true);
+}
+
+    }, TICK);
+  }
+
+  function startGame(){
+  // เลือกชุดคำถามตามด่าน
+  QUESTION_BANK = QUESTION_BANKS[selectedLevel] || [];
+  __qOrder = []; __qIdx = 0;          // รีเซ็ตลำดับสุ่มของกองใหม่
+
+  running=true; ended=false; paused=false;
+  overlay.classList.remove('show');
+  score=0; round=0; updateHUD();
+  bgm?.play?.().catch(()=>{});
+  nextRound();
+}
+
+  function endLevel(){ ended=true; running=false; finalScoreEl.textContent=String(score); finalRoundsEl.textContent=String(round); bgm?.pause?.(); winSound?.play?.().catch(()=>{}); overlay.classList.add('show') }
+
+  function pauseGame(){ if(!running||paused) return; paused=true; clearInterval(roundTimer); bgm?.pause?.(); document.querySelectorAll('.option').forEach(n=> n.style.pointerEvents='none'); }
+  function resumeGame(){ if(!paused||ended) return; paused=false; document.querySelectorAll('.option').forEach(n=> n.style.pointerEvents='auto'); startRoundTimer(); bgm?.play?.().catch(()=>{}); }
+
+  document.getElementById('pauseBtn')?.addEventListener('click', ()=>{ if(!paused){ pauseGame(); document.getElementById('pauseBtn').textContent='▶️ ต่อ'; } else { resumeGame(); document.getElementById('pauseBtn').textContent='⏸ หยุด'; } });
+  document.getElementById('quickRestart')?.addEventListener('click', ()=> location.reload());
+
+  restartBtn.addEventListener('click', ()=>{ overlay.classList.remove('show'); resetState(); startGame() });
+  selectLevelBtn.addEventListener('click', ()=>{ overlay.classList.remove('show'); resetState(); document.getElementById('landing').classList.remove('hide'); document.getElementById('startScreen').style.display='none' });
+  nextLevelBtn.addEventListener('click', ()=>{ selectedLevel = (selectedLevel+1)%4; overlay.classList.remove('show'); resetState(); openStartForLevel(true) });
+
+  // start screen + landing
+  const startScreen  = document.getElementById('startScreen');
+  const startTitle   = document.getElementById('startTitle');
+  const startBtn     = document.getElementById('startBtn');
+  const countdownEl  = document.getElementById('countdown');
+
+  function openStartForLevel(autoCountdown=true){
+    const L = LEVELS[selectedLevel]; startTitle.textContent = L.mission;
+    startScreen.style.display='flex';
+    if(autoCountdown){
+      let n=3; countdownEl.textContent=n; countdownEl.style.display='block';
+      const itv=setInterval(()=>{ n--; if(n>0){countdownEl.textContent=n}else{ clearInterval(itv); startScreen.style.display='none'; startGame() } },1000)
+
+    } else {
+  // โหมดกดปุ่มเอง
+  startBtn.disabled = false;
+  startBtn.style.pointerEvents = 'auto';
+  startBtn.style.display = 'inline-block';
+  countdownEl.style.display = 'none';
+}
+
+  }
+  startBtn?.addEventListener('click', ()=>{
+  if (startBtn.disabled) return;          // กันกดรัว
+  startBtn.disabled = true;               // ล็อกไว้จนเริ่มเกม
+  startBtn.style.pointerEvents = 'none';
+
+  startBtn.style.display='none';
+  let n = 3;
+  countdownEl.textContent = n;
+  countdownEl.style.display = 'block';
+
+  const itv = setInterval(()=>{
+    n--;
+    if(n>0){
+      countdownEl.textContent = n;
+    }else{
+      clearInterval(itv);
+      startScreen.style.display = 'none';
+      startGame();
+
+      // (เผื่อใช้กรณีเปิดใหม่โดยไม่เรียก openStartForLevel)
+      startBtn.disabled = false;
+      startBtn.style.pointerEvents = 'auto';
+    }
+  }, 1000);
+});
+
+  // เลือกด่าน
+  const LEVELS = [
+    { id:0, mission:"เลือกคำตอบจากตัวเลือกให้ถูกต้อง" },
+    { id:1, mission:"เลือกคำตอบจากตัวเลือกให้ถูกต้อง" },
+  ];
+
+  document.querySelectorAll('.levelBtn').forEach(btn=>{
+    if(btn.id==='guideBtn') return;
+    btn.addEventListener('click', ()=>{
+      selectedLevel = parseInt(btn.getAttribute('data-level'),10) || 0;
+      document.getElementById('landing').classList.add('hide');
+      openStartForLevel(false);
+    });
+  });
+  document.getElementById('guideBtn')?.addEventListener('click', ()=>{ document.getElementById('landing').classList.add('hide'); document.getElementById('guideScreen').style.display='flex' });
+  document.getElementById('guideBack')?.addEventListener('click', ()=>{ document.getElementById('guideScreen').style.display='none'; document.getElementById('landing').classList.remove('hide') });
+
+  // visibility pause
+  let wasRunningBeforeHide=false;
+  function uiBlockingOpen(){
+    const landing=document.getElementById('landing');
+    const startOpen = startScreen && startScreen.style.display!=='none';
+    const guide=document.getElementById('guideScreen');
+    const guideOpen = getComputedStyle(guide).display!=='none';
+    const overlayOpen=overlay.classList.contains('show');
+    return overlayOpen||(!landing.classList.contains('hide'))||startOpen||guideOpen
+  }
+  function handleHidden(){ wasRunningBeforeHide = running && !ended && !uiBlockingOpen(); if(wasRunningBeforeHide) pauseGame() }
+  function handleVisible(){ if(wasRunningBeforeHide && paused && !ended && !uiBlockingOpen()) resumeGame(); wasRunningBeforeHide=false }
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) handleHidden(); else handleVisible() });
+  window.addEventListener('blur', handleHidden); window.addEventListener('focus', handleVisible);
+
+  window.__MCGAME__ = { tryAnswer, startGame };
+})();
+</script>
+
+<!-- ===== คำสั่งเสียง ===== -->
+<script>
+(function(){
+  const micBtn   = document.getElementById('micBtn');
+  const voicePill= document.getElementById('voicePill');
+  if(!micBtn) return;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ micBtn.textContent='🎤 ไม่รองรับ'; micBtn.disabled=true; return }
+  let askedOnce=false, keepListening=false, recognizing=false;
+  const rec = new SR(); rec.lang='th-TH'; rec.continuous=true; rec.interimResults=true;
+  function showListening(on){ micBtn.textContent = on? '🎤 เสียง: เปิด':'🎤 เสียง: ปิด'; if(voicePill) voicePill.style.display = on? 'inline-block':'none' }
+  function tokensFrom(s){ s=(s||'').toLowerCase().trim(); s=s.replace(/\s*(ค่ะ|ครับ|คะ|ฮะ)$/,''); return s.split(/[\s,，。\.!?:;、]+/).filter(Boolean) }
+  function currentOptionsMap(){ const map=new Map(); document.querySelectorAll('.option').forEach(n=>{ const t=(n.textContent||'').trim().toLowerCase(); if(!map.has(t)) map.set(t,[]); map.get(t).push(n) }); return map }
+  function pickNearest(arr){ return arr[0] }
+  function tryFire(phrase){ const toks=tokensFrom(phrase); if(!toks.length) return false; const cmap=currentOptionsMap(); for(const t of toks){ if(cmap.has(t)){ const node = pickNearest(cmap.get(t)); node?.click(); return true } } return false }
+  rec.onresult=(e)=>{ for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; const txt=(r[0]?.transcript||'').trim(); if(!txt) continue; tryFire(txt) } };
+  rec.onstart=()=>{ recognizing=true; showListening(true) };
+  rec.onend=()=>{ recognizing=false; showListening(false); if(keepListening && !document.hidden){ setTimeout(()=>{ try{rec.start()}catch(_){} }, 200) } };
+  rec.onerror=(e)=>{ if(e?.error==='not-allowed'){ micBtn.textContent='🎤 ไม่ได้รับอนุญาต'; micBtn.disabled=true } };
+  async function ensureMicPermissionOnce(){ if(askedOnce) return; askedOnce=true; try{ const s=await navigator.mediaDevices.getUserMedia({audio:true}); s.getTracks().forEach(t=>t.stop()) }catch(_){ micBtn.textContent='🎤 ไม่ได้รับอนุญาต'; micBtn.disabled=true; throw _ } }
+  function startListen(){ keepListening=true; try{ rec.start() }catch(_){} }
+  function stopListen(){ keepListening=false; try{ rec.stop() }catch(_){} }
+  micBtn.addEventListener('click', async ()=>{ if(keepListening){ stopListen(); return } try{ await ensureMicPermissionOnce(); startListen() }catch(_){} });
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ if(recognizing) try{ rec.stop() }catch(_){} } else if(keepListening){ setTimeout(()=>{ try{ rec.start() }catch(_){ } }, 150) } });
+})();
+</script>
+
+<!-- ===== Pose (มือเป็นวงกลมแตะเลือกช้อยส์) ===== -->
+<script type="module">
+import {PoseLandmarker, FilesetResolver} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+const camBtn = document.getElementById('camBtn');
+const video  = document.getElementById('cameraMirror');
+const cvs    = document.getElementById('camCanvas');
+const ctx    = cvs.getContext('2d', { alpha: true });
+const DETECT_W = 320;
+let detectCanvas = document.createElement('canvas');
+let detectCtx = detectCanvas.getContext('2d', { alpha:false, desynchronized:true });
+let CAM_ON=false, landmarker=null, raf=0, stream=null;
+
+function fitCanvas(){ const dpr = CAM_ON? 1 : Math.max(1, window.devicePixelRatio||1); cvs.width=Math.round(innerWidth*dpr); cvs.height=Math.round(innerHeight*dpr); cvs.style.width=innerWidth+'px'; cvs.style.height=innerHeight+'px'; ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr,dpr) }
+fitCanvas(); addEventListener('resize', fitCanvas);
+function coverCropRect(){ const vw=video.videoWidth||640, vh=video.videoHeight||480; const sw=innerWidth, sh=innerHeight; const scale=Math.max(sw/vw, sh/vh); const sW=Math.round(sw/scale), sH=Math.round(sh/scale); const sX=Math.round((vw-sW)/2), sY=Math.round((vh-sH)/2); return {sX,sY,sW,sH,vw,vh,sw,sh} }
+function mapToScreen(nx,ny){ const {sX,sY,sW,sH,vw,vh,sw,sh} = coverCropRect(); const px=nx*vw, py=ny*vh; const u=(px-sX)/sW, v=(py-sY)/sH; let x=u*sw, y=v*sh; x=sw-x; return {x,y} }
+function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy) }
+
+const SHOW_HAND_BALL=false; const lastHitAt=new WeakMap(); const HIT_LOCK_MS=160;
+function circleIntersectsRect(cx,cy,r, rc){ const nx=Math.max(rc.left, Math.min(cx, rc.right)); const ny=Math.max(rc.top, Math.min(cy, rc.bottom)); const dx=cx-nx, dy=cy-ny; return (dx*dx+dy*dy)<=r*r }
+function hitByCircle(center, r){ const opts=[...document.querySelectorAll('.option')]; for(const n of opts){ const rc=n.getBoundingClientRect(); if(circleIntersectsRect(center.x,center.y,r,rc)){ const t=performance.now(); const last=lastHitAt.get(n)||0; if(t-last<HIT_LOCK_MS) continue; lastHitAt.set(n,t); n.click() } } }
+
+async function ensureLandmarker(){ if(landmarker) return landmarker; const fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"); landmarker = await PoseLandmarker.createFromOptions(fileset, { baseOptions:{ modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task" }, runningMode:'VIDEO', numPoses:1, minPoseDetectionConfidence:.35, minPosePresenceConfidence:.35, minTrackingConfidence:.35 }); return landmarker }
+function drawHandBall(elbowIdx, wristIdx, lm){ if(!lm[elbowIdx]||!lm[wristIdx]) return null; const elbow = mapToScreen(lm[elbowIdx].x, lm[elbowIdx].y); const wrist = mapToScreen(lm[wristIdx].x, lm[wristIdx].y); const r=24; const L=Math.max(1, dist(elbow,wrist)); const ux=(wrist.x-elbow.x)/L, uy=(wrist.y-elbow.y)/L; const HAND_PUSH=1.5, PUSH_PX=6; const center={ x: wrist.x + ux*(r*HAND_PUSH+PUSH_PX), y: wrist.y + uy*(r*HAND_PUSH+PUSH_PX) }; if(SHOW_HAND_BALL){ ctx.beginPath(); ctx.arc(center.x,center.y,r,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); } hitByCircle(center, r*.95); return center }
+function drawPoseAndColliders(res){ const sw=innerWidth, sh=innerHeight; ctx.clearRect(0,0,sw,sh); if(!res?.landmarks?.length) return; const lm=res.landmarks[0]; drawHandBall(13,15,lm); drawHandBall(14,16,lm) }
+function runLoop(){ const step=()=>{ if(!video.videoWidth){ raf=requestAnimationFrame(step); return } const now=performance.now(); try{ const {sX,sY,sW,sH}=coverCropRect(); detectCtx.drawImage(video, sX,sY,sW,sH, 0,0, detectCanvas.width, detectCanvas.height); const res=landmarker.detectForVideo(detectCanvas, now); drawPoseAndColliders(res) }catch(e){} raf=requestAnimationFrame(step) }; raf=requestAnimationFrame(step) }
+async function startCamera(){ await ensureLandmarker(); stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false }); video.srcObject=stream; await video.play().catch(()=>{}); const vw=video.videoWidth||640, vh=video.videoHeight||480; const ratio=vw/vh; detectCanvas.width=DETECT_W; detectCanvas.height=Math.round(DETECT_W/ratio); video.style.display='block'; cvs.style.display='block'; camBtn.textContent='📷 กล้อง: เปิด'; CAM_ON=true; fitCanvas(); runLoop() }
+function stopCamera(){ cancelAnimationFrame(raf); if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null } try{ video.pause() }catch(e){} video.removeAttribute('srcObject'); video.style.display='none'; cvs.style.display='none'; ctx.clearRect(0,0,innerWidth,innerHeight); camBtn.textContent='📷 กล้อง: ปิด'; CAM_ON=false; fitCanvas() }
+camBtn.addEventListener('click', async ()=>{ if(!stream){ try{ await startCamera() }catch(err){ camBtn.textContent='📷 กล้อง: ไม่ได้รับอนุญาต'; camBtn.disabled=true } } else { stopCamera() } });
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden && stream) stopCamera() });
+</script>
+
+</body>
+</html>
